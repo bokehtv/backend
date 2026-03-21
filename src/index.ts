@@ -1,5 +1,6 @@
 import express from 'express';
 import { authRouter } from './auth/auth.router';
+import { contentRouter } from './content/content.router';
 import { errorResponse } from './common/response';
 
 const app = express();
@@ -9,6 +10,7 @@ app.use(express.json());
 
 // API routes
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/content', contentRouter);
 
 // Global Error Handler
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

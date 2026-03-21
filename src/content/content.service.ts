@@ -1,0 +1,53 @@
+import { z } from 'zod';
+
+export const SearchQuerySchema = z.object({
+  query: z.string().min(1, 'Search query is required'),
+  page: z.string().optional().transform(p => p ? parseInt(p, 10) : 1),
+});
+
+export type SearchQuery = z.infer<typeof SearchQuerySchema>;
+
+export class ContentService {
+  private readonly tmdbBaseUrl = 'https://api.themoviedb.org/3';
+
+  async searchMulti(query: string, page: number = 1) {
+    const apiKey = process.env.TMDB_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('TMDB_API_KEY is not configured in the environment');
+    }
+
+    const url = `${this.tmdbBaseUrl}/search/multi?api_key=${apiKey}&query=${encodeURIComponent(query)}&page=${page}&include_adult=false`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.status_message || 'Failed to fetch data from TMDB');
+    }
+
+    const data = await response.json();
+    
+    // Formatting the TMDB response into our structure
+    return {
+      results: data.results.map((item: any) => ({
+        tmdb_id: item.id,
+        type: item.media_type,
+        title: item.title || item.name,
+        poster_url: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
+        overview: item.overview,
+        release_date: item.release_date || item.first_air_date,
+      })),
+      meta: {
+        page: data.page,
+        total: data.total_results,
+        totalPages: data.total_pages,
+      }
+    };
+  }
+}
