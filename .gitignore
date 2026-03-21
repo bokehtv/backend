@@ -1,0 +1,4 @@
+node_modules
+.env
+tsc_error.log
+/src/generated/prisma
