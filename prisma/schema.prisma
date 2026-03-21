@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  username      String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  watchlists    Watchlist[]
+  ratings       Rating[]
+  activity_logs ActivityLog[]
+
+  @@map("users")
+}
+
+enum ContentType {
+  MOVIE
+  TV
+}
+
+model Content {
+  id         String      @id @default(uuid())
+  tmdb_id    Int         @unique
+  type       ContentType
+  title      String
+  poster_url String?
+  metadata   Json?
+
+  watchlists    Watchlist[]
+  ratings       Rating[]
+  activity_logs ActivityLog[]
+
+  @@map("content")
+}
+
+enum WatchlistStatus {
+  WANT
+  WATCHING
+  DONE
+}
+
+model Watchlist {
+  id         String          @id @default(uuid())
+  user_id    String
+  content_id String
+  status     WatchlistStatus
+  added_at   DateTime        @default(now())
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("watchlist")
+}
+
+model Rating {
+  id         String   @id @default(uuid())
+  user_id    String
+  content_id String
+  score      Int      // 1-10
+  rated_at   DateTime @default(now())
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, content_id]) // Composite constraint
+  @@index([user_id, content_id])
+  @@map("ratings")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  user_id    String
+  action     String   // e.g. "RATED", "ADDED_TO_WATCHLIST"
+  content_id String?
+  timestamp  DateTime @default(now())
+
+  user    User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  content Content? @relation(fields: [content_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id])
+  @@map("activity_logs")
+}
