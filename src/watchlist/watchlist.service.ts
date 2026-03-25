@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { prisma } from '../common/prisma';
+import redis from '../common/redis';
+import logger from '../common/logger';
 
 export const AddToWatchlistDto = z.object({
   tmdb_id: z.number(),
@@ -17,7 +19,21 @@ export type AddToWatchlistInput = z.infer<typeof AddToWatchlistDto>;
 export type UpdateWatchlistStatusInput = z.infer<typeof UpdateWatchlistStatusDto>;
 
 export class WatchlistService {
+  private readonly redisPrefix = 'watchlist:';
+  private readonly cacheTTL = 3600; // 1 hour for user-specific data
+
   async getWatchlist(userId: string) {
+    const cacheKey = `${this.redisPrefix}${userId}`;
+    
+    // Check cache
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      logger.info('Redis cache hit for watchlist', { userId, cacheKey });
+      return JSON.parse(cachedData);
+    }
+    
+    logger.info('Redis cache miss for watchlist', { userId, cacheKey });
+
     const list = await prisma.watchlist.findMany({
       where: { user_id: userId },
       include: {
@@ -27,6 +43,10 @@ export class WatchlistService {
         added_at: 'desc',
       },
     });
+
+    // Store in cache
+    await redis.setex(cacheKey, this.cacheTTL, JSON.stringify(list));
+
     return list;
   }
 
@@ -77,6 +97,9 @@ export class WatchlistService {
       return watchlistEntry;
     });
 
+    // Invalidate cache
+    await this.invalidateCache(userId);
+
     return result;
   }
 
@@ -100,6 +123,9 @@ export class WatchlistService {
       },
     });
 
+    // Invalidate cache
+    await this.invalidateCache(userId);
+
     return updatedEntry;
   }
 
@@ -120,6 +146,15 @@ export class WatchlistService {
       },
     });
 
+    // Invalidate cache
+    await this.invalidateCache(userId);
+
     return { success: true };
+  }
+
+  private async invalidateCache(userId: string) {
+    const cacheKey = `${this.redisPrefix}${userId}`;
+    await redis.del(cacheKey);
+    logger.info('Redis cache invalidated for watchlist', { userId, cacheKey });
   }
 }
