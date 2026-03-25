@@ -17,4 +17,8 @@ router.post('/login', authRateLimiter, authController.login);
 // @desc    Refresh access token using httpOnly refresh token cookie
 router.post('/refresh', authController.refresh);
 
+// @route   POST /api/v1/auth/logout
+// @desc    Logout and clear cookies
+router.post('/logout', authController.logout);
+
 export { router as authRouter };

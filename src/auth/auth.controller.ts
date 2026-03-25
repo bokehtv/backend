@@ -26,6 +26,14 @@ export class AuthController {
       
       const { user, accessToken, refreshToken } = await this.authService.login(data);
       
+      // Set the access token as cookie for F5 flicker prevention
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 1 * 60 * 60 * 1000 // 1 hour
+      });
+
       // Set the refresh token as HttpOnly cookie as locked in ADR-005
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
@@ -54,6 +62,13 @@ export class AuthController {
 
       const { user, accessToken, refreshToken } = await this.authService.refresh(token);
       
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 1 * 60 * 60 * 1000
+      });
+
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -65,5 +80,11 @@ export class AuthController {
     } catch (error) {
       res.status(401).json(errorResponse('UNAUTHORIZED', (error as Error).message));
     }
+  };
+
+  logout = async (req: Request, res: Response) => {
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+    res.status(200).json(successResponse({ message: 'Logged out successfully' }));
   };
 }
