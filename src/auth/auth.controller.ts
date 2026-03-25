@@ -43,4 +43,27 @@ export class AuthController {
       }
     }
   };
+
+  refresh = async (req: Request, res: Response) => {
+    try {
+      const token = req.cookies?.refreshToken;
+      
+      if (!token) {
+        return res.status(401).json(errorResponse('UNAUTHORIZED', 'Missing refresh token'));
+      }
+
+      const { user, accessToken, refreshToken } = await this.authService.refresh(token);
+      
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+
+      res.status(200).json(successResponse({ user, accessToken }));
+    } catch (error) {
+      res.status(401).json(errorResponse('UNAUTHORIZED', (error as Error).message));
+    }
+  };
 }
