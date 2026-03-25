@@ -56,8 +56,14 @@ export class ContentService {
     if (!apiKey) throw new Error('TMDB_API_KEY is not configured');
 
     const url = `${this.tmdbBaseUrl}/trending/all/day?api_key=${apiKey}&page=${page}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch trending results');
+    let response;
+    try {
+      response = await fetch(url);
+    } catch (networkError) {
+       throw new Error(`TMDB connection failed: ${(networkError as Error).message}. Check your server internet connection.`);
+    }
+
+    if (!response.ok) throw new Error('Failed to fetch trending results from TMDB');
 
     const data = await response.json();
     return {
