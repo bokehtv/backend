@@ -3,13 +3,21 @@ import { verifyAccessToken } from './jwt';
 import { errorResponse } from './response';
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  let token: string | undefined;
+
+  // 1. Check Authorization Header
   const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json(errorResponse('UNAUTHORIZED', 'Missing or invalid authorization header'));
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  } 
+  // 2. Fallback to Cookie (for SSR/F5 hydration)
+  else if (req.cookies && req.cookies.accessToken) {
+    token = req.cookies.accessToken;
   }
 
-  const token = authHeader.substring(7);
+  if (!token) {
+    return res.status(401).json(errorResponse('UNAUTHORIZED', 'Missing or invalid authentication'));
+  }
 
   try {
     const payload = verifyAccessToken(token);
