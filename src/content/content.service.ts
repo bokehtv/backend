@@ -17,14 +17,17 @@ export class ContentService {
   async searchMulti(query: string, page: number = 1) {
     const cacheKey = `${this.redisPrefix}${query.toLowerCase()}:${page}`;
     
-    // Check cache
-    const cachedData = await redis.get(cacheKey);
-    if (cachedData) {
-      logger.info('Redis cache hit for TMDB search', { query, page, cacheKey });
-      return JSON.parse(cachedData);
+    // Check cache (Graceful Fallback)
+    try {
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData) {
+        logger.info('Redis cache hit for TMDB search', { query, page, cacheKey });
+        return JSON.parse(cachedData);
+      }
+      logger.info('Redis cache miss for TMDB search', { query, page, cacheKey });
+    } catch (err) {
+      logger.warn('Redis unavailable for cache check, skipping...', { error: (err as Error).message });
     }
-    
-    logger.info('Redis cache miss for TMDB search', { query, page, cacheKey });
 
     const apiKey = process.env.TMDB_API_KEY;
     
@@ -65,13 +68,31 @@ export class ContentService {
       }
     };
 
-    // Store in cache
-    await redis.setex(cacheKey, this.cacheTTL, JSON.stringify(results));
+    // Store in cache (Graceful Fallback)
+    try {
+      await redis.setex(cacheKey, this.cacheTTL, JSON.stringify(results));
+    } catch (err) {
+      logger.warn('Redis unavailable to store cache, skipping...', { error: (err as Error).message });
+    }
     
     return results;
   }
 
   async getTrending(page: number = 1) {
+    const cacheKey = `${this.redisPrefix}trending:${page}`;
+
+    // Check cache (Graceful Fallback)
+    try {
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData) {
+        logger.info('Redis cache hit for trending', { page, cacheKey });
+        return JSON.parse(cachedData);
+      }
+      logger.info('Redis cache miss for trending', { page, cacheKey });
+    } catch (err) {
+      logger.warn('Redis unavailable for trending cache check, skipping...', { error: (err as Error).message });
+    }
+
     const apiKey = process.env.TMDB_API_KEY;
     if (!apiKey) throw new Error('TMDB_API_KEY is not configured');
 
@@ -86,8 +107,10 @@ export class ContentService {
     if (!response.ok) throw new Error('Failed to fetch trending results from TMDB');
 
     const data = await response.json();
-    return {
-      results: data.results.map((item: any) => ({
+    
+    // Formatting the TMDB response into our structure
+    const results = {
+      results: (data.results || []).map((item: any) => ({
         tmdb_id: item.id,
         type: item.media_type || (item.title ? 'movie' : 'tv'),
         title: item.title || item.name,
@@ -96,10 +119,19 @@ export class ContentService {
         release_date: item.release_date || item.first_air_date,
       })),
       meta: {
-        page: data.page,
-        total: data.total_results,
-        totalPages: data.total_pages,
+        page: data.page || 1,
+        total: data.total_results || 0,
+        totalPages: data.total_pages || 1,
       }
     };
+
+    // Store in cache (Graceful Fallback)
+    try {
+      await redis.setex(cacheKey, this.cacheTTL, JSON.stringify(results));
+    } catch (err) {
+      logger.warn('Redis unavailable to store trending cache, skipping...', { error: (err as Error).message });
+    }
+
+    return results;
   }
 }
