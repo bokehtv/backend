@@ -25,14 +25,17 @@ export class WatchlistService {
   async getWatchlist(userId: string) {
     const cacheKey = `${this.redisPrefix}${userId}`;
     
-    // Check cache
-    const cachedData = await redis.get(cacheKey);
-    if (cachedData) {
-      logger.info('Redis cache hit for watchlist', { userId, cacheKey });
-      return JSON.parse(cachedData);
+    // Check cache (Graceful Fallback)
+    try {
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData) {
+        logger.info('Redis cache hit for watchlist', { userId, cacheKey });
+        return JSON.parse(cachedData);
+      }
+      logger.info('Redis cache miss for watchlist', { userId, cacheKey });
+    } catch (err) {
+      logger.warn('Redis unavailable for cache check, skipping...', { error: (err as Error).message });
     }
-    
-    logger.info('Redis cache miss for watchlist', { userId, cacheKey });
 
     const list = await prisma.watchlist.findMany({
       where: { user_id: userId },
@@ -44,8 +47,12 @@ export class WatchlistService {
       },
     });
 
-    // Store in cache
-    await redis.setex(cacheKey, this.cacheTTL, JSON.stringify(list));
+    // Store in cache (Graceful Fallback)
+    try {
+      await redis.setex(cacheKey, this.cacheTTL, JSON.stringify(list));
+    } catch (err) {
+      logger.warn('Redis unavailable to store cache, skipping...', { error: (err as Error).message });
+    }
 
     return list;
   }
@@ -154,7 +161,11 @@ export class WatchlistService {
 
   private async invalidateCache(userId: string) {
     const cacheKey = `${this.redisPrefix}${userId}`;
-    await redis.del(cacheKey);
-    logger.info('Redis cache invalidated for watchlist', { userId, cacheKey });
+    try {
+      await redis.del(cacheKey);
+      logger.info('Redis cache invalidated for watchlist', { userId, cacheKey });
+    } catch (err) {
+      logger.warn('Redis unavailable to invalidate cache, skipping...', { error: (err as Error).message });
+    }
   }
 }
