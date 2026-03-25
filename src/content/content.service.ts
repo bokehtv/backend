@@ -50,4 +50,30 @@ export class ContentService {
       }
     };
   }
+
+  async getTrending(page: number = 1) {
+    const apiKey = process.env.TMDB_API_KEY;
+    if (!apiKey) throw new Error('TMDB_API_KEY is not configured');
+
+    const url = `${this.tmdbBaseUrl}/trending/all/day?api_key=${apiKey}&page=${page}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch trending results');
+
+    const data = await response.json();
+    return {
+      results: data.results.map((item: any) => ({
+        tmdb_id: item.id,
+        type: item.media_type || (item.title ? 'movie' : 'tv'),
+        title: item.title || item.name,
+        poster_url: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
+        overview: item.overview,
+        release_date: item.release_date || item.first_air_date,
+      })),
+      meta: {
+        page: data.page,
+        total: data.total_results,
+        totalPages: data.total_pages,
+      }
+    };
+  }
 }

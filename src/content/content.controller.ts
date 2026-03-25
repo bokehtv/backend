@@ -24,4 +24,14 @@ export class ContentController {
       }
     }
   };
+
+  getTrending = async (req: Request, res: Response) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+      const { results, meta } = await this.contentService.getTrending(page);
+      res.status(200).json(successResponse(results, meta));
+    } catch (error) {
+      res.status(500).json(errorResponse('SERVER_ERROR', (error as Error).message));
+    }
+  };
 }
