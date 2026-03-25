@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import redis from '../common/redis';
+import logger from '../common/logger';
 
 export const SearchQuerySchema = z.object({
   query: z.string().min(1, 'Search query is required'),
@@ -9,8 +11,21 @@ export type SearchQuery = z.infer<typeof SearchQuerySchema>;
 
 export class ContentService {
   private readonly tmdbBaseUrl = 'https://api.themoviedb.org/3';
+  private readonly redisPrefix = 'tmdb:search:';
+  private readonly cacheTTL = 86400; // 24 hours in seconds
 
   async searchMulti(query: string, page: number = 1) {
+    const cacheKey = `${this.redisPrefix}${query.toLowerCase()}:${page}`;
+    
+    // Check cache
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      logger.info('Redis cache hit for TMDB search', { query, page, cacheKey });
+      return JSON.parse(cachedData);
+    }
+    
+    logger.info('Redis cache miss for TMDB search', { query, page, cacheKey });
+
     const apiKey = process.env.TMDB_API_KEY;
     
     if (!apiKey) {
@@ -34,7 +49,7 @@ export class ContentService {
     const data = await response.json();
     
     // Formatting the TMDB response into our structure
-    return {
+    const results = {
       results: data.results.map((item: any) => ({
         tmdb_id: item.id,
         type: item.media_type,
@@ -49,6 +64,11 @@ export class ContentService {
         totalPages: data.total_pages,
       }
     };
+
+    // Store in cache
+    await redis.setex(cacheKey, this.cacheTTL, JSON.stringify(results));
+    
+    return results;
   }
 
   async getTrending(page: number = 1) {
