@@ -21,8 +21,14 @@ export class ContentService {
     try {
       const cachedData = await redis.get(cacheKey);
       if (cachedData) {
-        logger.info('Redis cache hit for TMDB search', { query, page, cacheKey });
-        return JSON.parse(cachedData);
+        try {
+          const parsed = JSON.parse(cachedData);
+          logger.info('Redis cache hit for TMDB search', { query, page, cacheKey });
+          return parsed;
+        } catch (parseError) {
+          logger.warn('Redis cache corrupted for search, ignoring...', { cacheKey, error: (parseError as Error).message });
+          // If parse fails, we just continue to fetch from TMDB
+        }
       }
       logger.info('Redis cache miss for TMDB search', { query, page, cacheKey });
     } catch (err) {
