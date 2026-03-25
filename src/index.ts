@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import { authRouter } from './auth/auth.router';
 import { contentRouter } from './content/content.router';
@@ -6,9 +7,15 @@ import { watchlistRouter } from './watchlist/watchlist.router';
 import { errorResponse } from './common/response';
 import { generalRateLimiter } from './common/rate-limit';
 import { logger } from './common/logger';
+import cors from 'cors';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true
+}));
 
 app.use(express.json());
 

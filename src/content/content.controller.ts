@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { ContentService, SearchQuerySchema } from './content.service';
 import { successResponse, errorResponse } from '../common/response';
 import { ZodError } from 'zod';
+import { logger } from '../common/logger';
 
 export class ContentController {
   private contentService = new ContentService();
@@ -29,8 +30,19 @@ export class ContentController {
     try {
       const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
       const { results, meta } = await this.contentService.getTrending(page);
-      res.status(200).json(successResponse(results, meta));
+      
+      // Ensure meta matches successResponse expectations
+      res.status(200).json(successResponse(results, { 
+        page: meta.page, 
+        total: meta.total 
+      }));
     } catch (error) {
+      logger.error({
+        message: 'Trending API failure',
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        url: req.originalUrl
+      });
       res.status(500).json(errorResponse('SERVER_ERROR', (error as Error).message));
     }
   };
