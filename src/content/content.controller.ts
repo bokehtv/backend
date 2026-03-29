@@ -16,6 +16,13 @@ export class ContentController {
       
       res.status(200).json(successResponse(results, meta));
     } catch (error) {
+      logger.error('Content search failed', { 
+        query: req.query.query, 
+        page: req.query.page, 
+        error: (error as Error).message,
+        stack: (error as Error).stack 
+      });
+
       if (error instanceof ZodError) {
         res.status(400).json(errorResponse('VALIDATION_ERROR', error.issues[0].message));
       } else {

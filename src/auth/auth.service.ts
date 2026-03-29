@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { prisma } from '../common/prisma';
-import { generateAccessToken, generateRefreshToken } from '../common/jwt';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../common/jwt';
 
 export const RegisterDto = z.object({
   email: z.string().email(),
@@ -67,5 +67,31 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+
+  async refresh(token: string) {
+    try {
+      const payload = verifyRefreshToken(token);
+      const user = await prisma.user.findUnique({
+        where: { id: payload.userId },
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const accessToken = generateAccessToken({ userId: user.id });
+      const newRefreshToken = generateRefreshToken({ userId: user.id });
+
+      const { password_hash: _, ...userWithoutPassword } = user;
+
+      return {
+        user: userWithoutPassword,
+        accessToken,
+        refreshToken: newRefreshToken,
+      };
+    } catch (_error) {
+      throw new Error('Invalid or expired refresh token', { cause: _error });
+    }
   }
 }

@@ -13,4 +13,12 @@ router.post('/register', authRateLimiter, authController.register);
 // @desc    Standard email/password login
 router.post('/login', authRateLimiter, authController.login);
 
+// @route   POST /api/v1/auth/refresh
+// @desc    Refresh access token using httpOnly refresh token cookie
+router.post('/refresh', authController.refresh);
+
+// @route   POST /api/v1/auth/logout
+// @desc    Logout and clear cookies
+router.post('/logout', authController.logout);
+
 export { router as authRouter };

@@ -7,44 +7,31 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  username      String   @unique
+  id            String        @id @default(uuid())
+  email         String        @unique
+  username      String        @unique
   password_hash String
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-
-  watchlists    Watchlist[]
-  ratings       Rating[]
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
   activity_logs ActivityLog[]
+  ratings       Rating[]
+  watchlists    Watchlist[]
 
   @@map("users")
 }
 
-enum ContentType {
-  MOVIE
-  TV
-}
-
 model Content {
-  id         String      @id @default(uuid())
-  tmdb_id    Int         @unique
-  type       ContentType
-  title      String
-  poster_url String?
-  metadata   Json?
-
-  watchlists    Watchlist[]
-  ratings       Rating[]
+  id            String        @id @default(uuid())
+  tmdb_id       Int           @unique
+  type          ContentType
+  title         String
+  poster_url    String?
+  metadata      Json?
   activity_logs ActivityLog[]
+  ratings       Rating[]
+  watchlists    Watchlist[]
 
   @@map("content")
-}
-
-enum WatchlistStatus {
-  WANT
-  WATCHING
-  DONE
 }
 
 model Watchlist {
@@ -53,9 +40,8 @@ model Watchlist {
   content_id String
   status     WatchlistStatus
   added_at   DateTime        @default(now())
-
-  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
+  content    Content         @relation(fields: [content_id], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
   @@map("watchlist")
@@ -65,13 +51,12 @@ model Rating {
   id         String   @id @default(uuid())
   user_id    String
   content_id String
-  score      Int      // 1-10
+  score      Int
   rated_at   DateTime @default(now())
+  content    Content  @relation(fields: [content_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_id, content_id]) // Composite constraint
+  @@unique([user_id, content_id])
   @@index([user_id, content_id])
   @@map("ratings")
 }
@@ -79,13 +64,23 @@ model Rating {
 model ActivityLog {
   id         String   @id @default(uuid())
   user_id    String
-  action     String   // e.g. "RATED", "ADDED_TO_WATCHLIST"
+  action     String
   content_id String?
   timestamp  DateTime @default(now())
-
-  user    User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  content Content? @relation(fields: [content_id], references: [id], onDelete: SetNull)
+  content    Content? @relation(fields: [content_id], references: [id])
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
   @@map("activity_logs")
+}
+
+enum ContentType {
+  MOVIE
+  TV
+}
+
+enum WatchlistStatus {
+  WANT
+  WATCHING
+  DONE
 }
