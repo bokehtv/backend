@@ -23,7 +23,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
     const payload = verifyAccessToken(token);
     res.locals.userId = payload.userId;
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json(errorResponse('UNAUTHORIZED', 'Invalid or expired access token'));
   }
 }

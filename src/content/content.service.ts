@@ -71,6 +71,7 @@ export class ContentService {
     
     // Formatting the TMDB response into our structure
     const results = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       results: data.results.map((item: any) => ({
         tmdb_id: item.id,
         type: item.media_type,
@@ -135,7 +136,7 @@ export class ContentService {
     try {
       response = await fetch(url, { headers });
     } catch (networkError) {
-       throw new Error(`TMDB connection failed: ${(networkError as Error).message}. Check your server internet connection.`);
+       throw new Error(`TMDB connection failed: ${(networkError as Error).message}. Check your server internet connection.`, { cause: networkError });
     }
 
     if (!response.ok) throw new Error('Failed to fetch trending results from TMDB');
@@ -144,6 +145,7 @@ export class ContentService {
     
     // Formatting the TMDB response into our structure
     const results = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       results: (data.results || []).map((item: any) => ({
         tmdb_id: item.id,
         type: item.media_type || (item.title ? 'movie' : 'tv'),

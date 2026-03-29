@@ -38,7 +38,7 @@ app.use('/api/v1/users', usersRouter);
 app.use('/api/v1/watchlist', watchlistRouter);
 
 // Global Error Handler
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error({
     message: 'Unhandled server error',
     error: err.message,

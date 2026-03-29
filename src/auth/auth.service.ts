@@ -90,8 +90,8 @@ export class AuthService {
         accessToken,
         refreshToken: newRefreshToken,
       };
-    } catch (error) {
-      throw new Error('Invalid or expired refresh token');
+    } catch (_error) {
+      throw new Error('Invalid or expired refresh token', { cause: _error });
     }
   }
 }
