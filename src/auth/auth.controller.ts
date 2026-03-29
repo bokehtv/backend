@@ -26,19 +26,21 @@ export class AuthController {
       
       const { user, accessToken, refreshToken } = await this.authService.login(data);
       
+      const isProduction = process.env.NODE_ENV === 'production';
+      
       // Set the access token as cookie for F5 flicker prevention
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'strict',
         maxAge: 1 * 60 * 60 * 1000 // 1 hour
       });
 
       // Set the refresh token as HttpOnly cookie as locked in ADR-005
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'strict',
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
       });
 
@@ -62,17 +64,19 @@ export class AuthController {
 
       const { user, accessToken, refreshToken } = await this.authService.refresh(token);
       
+      const isProduction = process.env.NODE_ENV === 'production';
+
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'strict',
         maxAge: 1 * 60 * 60 * 1000
       });
 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'strict',
         maxAge: 7 * 24 * 60 * 60 * 1000
       });
 
@@ -83,8 +87,15 @@ export class AuthController {
   };
 
   logout = async (req: Request, res: Response) => {
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'strict',
+    } as const;
+
+    res.clearCookie('accessToken', cookieOptions);
+    res.clearCookie('refreshToken', cookieOptions);
     res.status(200).json(successResponse({ message: 'Logged out successfully' }));
   };
 }
