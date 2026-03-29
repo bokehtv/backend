@@ -13,13 +13,20 @@ import cookieParser from 'cookie-parser';
 const app = express();
 app.use(cookieParser());
 const PORT = process.env.PORT || 5000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: NODE_ENV === 'production' ? FRONTEND_URL : ['http://localhost:3000', FRONTEND_URL],
   credentials: true
 }));
 
 app.use(express.json());
+
+// Health check endpoint
+app.get('/api/v1/health', (req, res) => {
+  res.status(200).json({ status: 'UP', timestamp: new Date().toISOString() });
+});
 
 // Apply general rate limiter to all API routes
 app.use('/api/v1', generalRateLimiter);

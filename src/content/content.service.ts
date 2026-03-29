@@ -36,18 +36,30 @@ export class ContentService {
     }
 
     const apiKey = process.env.TMDB_API_KEY;
+    const readAccessToken = process.env.TMDB_READ_ACCESS_TOKEN;
     
-    if (!apiKey) {
-      throw new Error('TMDB_API_KEY is not configured in the environment');
+    if (!apiKey && !readAccessToken) {
+      throw new Error('Neither TMDB_API_KEY nor TMDB_READ_ACCESS_TOKEN is configured in the environment');
     }
 
-    const url = `${this.tmdbBaseUrl}/search/multi?api_key=${apiKey}&query=${encodeURIComponent(query)}&page=${page}&include_adult=false`;
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+    };
+
+    let url: string;
+    
+    if (readAccessToken) {
+      // Use Bearer Token (Preferred TMDB method)
+      headers['Authorization'] = `Bearer ${readAccessToken}`;
+      url = `${this.tmdbBaseUrl}/search/multi?query=${encodeURIComponent(query)}&page=${page}&include_adult=false`;
+    } else {
+      // Fallback to Query String API Key
+      url = `${this.tmdbBaseUrl}/search/multi?api_key=${apiKey}&query=${encodeURIComponent(query)}&page=${page}&include_adult=false`;
+    }
 
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -100,12 +112,28 @@ export class ContentService {
     }
 
     const apiKey = process.env.TMDB_API_KEY;
-    if (!apiKey) throw new Error('TMDB_API_KEY is not configured');
+    const readAccessToken = process.env.TMDB_READ_ACCESS_TOKEN;
+    
+    if (!apiKey && !readAccessToken) {
+      throw new Error('TMDB auth not configured');
+    }
 
-    const url = `${this.tmdbBaseUrl}/trending/all/day?api_key=${apiKey}&page=${page}`;
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+    };
+
+    let url: string;
+    
+    if (readAccessToken) {
+      headers['Authorization'] = `Bearer ${readAccessToken}`;
+      url = `${this.tmdbBaseUrl}/trending/all/day?page=${page}`;
+    } else {
+      url = `${this.tmdbBaseUrl}/trending/all/day?api_key=${apiKey}&page=${page}`;
+    }
+
     let response;
     try {
-      response = await fetch(url);
+      response = await fetch(url, { headers });
     } catch (networkError) {
        throw new Error(`TMDB connection failed: ${(networkError as Error).message}. Check your server internet connection.`);
     }
