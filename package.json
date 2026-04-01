@@ -13,7 +13,7 @@
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "cross-env NODE_ENV=test jest"
+    "test": "cross-env NODE_ENV=test jest --forceExit"
   },
   "repository": {
     "type": "git",
