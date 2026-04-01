@@ -48,6 +48,10 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
   res.status(500).json(errorResponse('INTERNAL_SERVER_ERROR', err.message));
 });
 
-app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    logger.info(`Server is running on port ${PORT}`);
+  });
+}
+
+export default app;
