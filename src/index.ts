@@ -9,8 +9,11 @@ import { generalRateLimiter } from './common/rate-limit';
 import { logger } from './common/logger';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import { metricsMiddleware } from './common/metrics';
+import { loggerMiddleware } from './common/loggerMiddleware';
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cookieParser());
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -22,6 +25,10 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Telemetry & Logging
+app.use(metricsMiddleware);
+app.use(loggerMiddleware);
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {
