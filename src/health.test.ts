@@ -1,5 +1,6 @@
 import request from 'supertest';
 import app from './index';
+import redis from './common/redis';
 
 describe('Health Check API', () => {
   it('should return a 200 status and UP status message', async () => {
@@ -8,5 +9,14 @@ describe('Health Check API', () => {
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('status', 'UP');
     expect(response.body).toHaveProperty('timestamp');
+  });
+
+  afterAll(async () => {
+    try {
+      // Gracefully close Redis or disconnect if quit fails (common in test environments)
+      await redis.quit();
+    } catch {
+      redis.disconnect();
+    }
   });
 });
