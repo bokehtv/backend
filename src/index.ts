@@ -12,9 +12,13 @@ import cookieParser from 'cookie-parser';
 import { metricsMiddleware } from './common/metrics';
 import { loggerMiddleware } from './common/loggerMiddleware';
 
+import { prisma } from './common/prisma';
+import http from 'http';
+
 const app = express();
 app.set('trust proxy', 1);
 app.use(cookieParser());
+
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -55,10 +59,34 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
   res.status(500).json(errorResponse('INTERNAL_SERVER_ERROR', err.message));
 });
 
+let server: http.Server;
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
+  server = app.listen(PORT, () => {
     logger.info(`Server is running on port ${PORT}`);
   });
 }
+
+// Graceful Shutdown
+const shutdown = async (signal: string) => {
+  logger.info(`Received ${signal}. Starting graceful shutdown...`);
+  
+  if (server) {
+    server.close(() => {
+      logger.info('HTTP server closed.');
+    });
+  }
+
+  try {
+    await prisma.$disconnect();
+    logger.info('Prisma disconnected.');
+    process.exit(0);
+  } catch (err) {
+    logger.error('Error during shutdown', { error: (err as Error).message });
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 export default app;
