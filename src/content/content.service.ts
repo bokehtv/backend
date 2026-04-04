@@ -9,6 +9,17 @@ export const SearchQuerySchema = z.object({
 
 export type SearchQuery = z.infer<typeof SearchQuerySchema>;
 
+export interface TmdbItem {
+  id: number;
+  media_type?: string;
+  title?: string;
+  name?: string;
+  poster_path?: string;
+  overview: string;
+  release_date?: string;
+  first_air_date?: string;
+}
+
 export class ContentService {
   private readonly tmdbBaseUrl = 'https://api.themoviedb.org/3';
   private readonly redisPrefix = 'tmdb:search:';
@@ -71,8 +82,7 @@ export class ContentService {
     
     // Formatting the TMDB response into our structure
     const results = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      results: data.results.map((item: any) => ({
+      results: (data.results as TmdbItem[]).map((item) => ({
         tmdb_id: item.id,
         type: item.media_type,
         title: item.title || item.name,
@@ -145,8 +155,7 @@ export class ContentService {
     
     // Formatting the TMDB response into our structure
     const results = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      results: (data.results || []).map((item: any) => ({
+      results: ((data.results || []) as TmdbItem[]).map((item) => ({
         tmdb_id: item.id,
         type: item.media_type || (item.title ? 'movie' : 'tv'),
         title: item.title || item.name,
@@ -171,3 +180,4 @@ export class ContentService {
     return results;
   }
 }
+
